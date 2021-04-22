@@ -10,8 +10,7 @@ AR			= ar csr
 	$(CC) $(CFLAGS) -Imlx -c $< -o $@
 
 $(NAME): $(OBJ)
-	# $(CC) -Lmlx -lmlx -framework OpenGL -framework AppKit -o $(NAME)
-	$(CC) -lmlx -framework OpenGL -framework AppKit main.c && ./a.out
+	$(CC) -lmlx -framework OpenGL -framework AppKit cub.c && ./a.out
 
 all : ${NAME}
 
