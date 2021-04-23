@@ -88,6 +88,7 @@ typedef struct  s_data {
 	t_point		pla;
 	t_texture	texture;
 	t_texture	barrel;
+	t_texture	redWall;
 	t_bool		mi_ban;
 	int			color;
 }               t_data;
@@ -129,6 +130,45 @@ int worldMap[mapWidth][mapHeight] =
   {2,2,0,0,0,0,0,2,2,2,0,0,0,2,2,0,5,0,5,0,0,0,5,5},
   {2,2,2,2,1,2,2,2,2,2,2,1,2,2,2,5,5,5,5,5,5,5,5,5}
 };
+
+
+
+//1D Zbuffer
+double ZBuffer[width];
+
+//arrays used to sort the sprites
+int spriteOrder[numSprites];
+double spriteDistance[numSprites];
+
+//function used to sort the sprites
+// void sortSprites(int* order, double* dist, int 	);
+
+void sortSprites(int* order, double* dist, int amount)
+{
+	int		swap;
+	double	swapD;
+
+	for(int i = 0; i < amount; i++)
+	{
+		for(int j = i + 1; j < amount; j++)
+		{
+			if (dist[i] < dist[j])
+			{
+				swapD = dist[i];
+				dist[i] = dist[j];
+				dist[j] = swapD;
+				swap = order[i];
+				order[i] = order[j];
+				order[j] = swap;
+			}
+		}
+		
+	}
+	
+}
+
+
+
 void	ft_render(t_data *img);
 
 // int		close_w(int keycode, t_data *data)
@@ -266,63 +306,63 @@ void	verLine(int x, int start, int end, t_data data)
 void	ft_render(t_data *img)
 {
 	    //FLOOR CASTING
-    for(int y = 0; y < height; y++)
-    {
-      // rayDir for leftmost ray (x = 0) and rightmost ray (x = w)
-      float rayDirX0 = img->dir.x - img->pla.x;
-      float rayDirY0 = img->dir.y - img->pla.y;
-      float rayDirX1 = img->dir.x + img->pla.x;
-      float rayDirY1 = img->dir.y + img->pla.y;
+    // for(int y = 0; y < height; y++)
+    // {
+    //   // rayDir for leftmost ray (x = 0) and rightmost ray (x = w)
+    //   float rayDirX0 = img->dir.x - img->pla.x;
+    //   float rayDirY0 = img->dir.y - img->pla.y;
+    //   float rayDirX1 = img->dir.x + img->pla.x;
+    //   float rayDirY1 = img->dir.y + img->pla.y;
 
-      // Current y position compared to the center of the screen (the horizon)
-      int p = y - height / 2;
+    //   // Current y position compared to the center of the screen (the horizon)
+    //   int p = y - height / 2;
 
-      // Vertical position of the camera.
-      float posZ = 0.5 * height;
+    //   // Vertical position of the camera.
+    //   float posZ = 0.5 * height;
 
-      // Horizontal distance from the camera to the floor for the current row.
-      // 0.5 is the z position exactly in the middle between floor and ceiling.
-      float rowDistance = posZ / p;
+    //   // Horizontal distance from the camera to the floor for the current row.
+    //   // 0.5 is the z position exactly in the middle between floor and ceiling.
+    //   float rowDistance = posZ / p;
 
-      // calculate the real world step vector we have to add for each x (parallel to camera plane)
-      // adding step by step avoids multiplications with a weight in the inner loop
-      float floorStepX = rowDistance * (rayDirX1 - rayDirX0) / width;
-      float floorStepY = rowDistance * (rayDirY1 - rayDirY0) / width;
+    //   // calculate the real world step vector we have to add for each x (parallel to camera plane)
+    //   // adding step by step avoids multiplications with a weight in the inner loop
+    //   float floorStepX = rowDistance * (rayDirX1 - rayDirX0) / width;
+    //   float floorStepY = rowDistance * (rayDirY1 - rayDirY0) / width;
 
-      // real world coordinates of the leftmost column. This will be updated as we step to the right.
-      float floorX = img->pos.x + rowDistance * rayDirX0;
-      float floorY = img->pos.y + rowDistance * rayDirY0;
+    //   // real world coordinates of the leftmost column. This will be updated as we step to the right.
+    //   float floorX = img->pos.x + rowDistance * rayDirX0;
+    //   float floorY = img->pos.y + rowDistance * rayDirY0;
 
-      for(int x = 0; x < width; ++x)
-      {
-        // the cell coord is simply got from the integer parts of floorX and floorY
-        int cellX = (int)(floorX);
-        int cellY = (int)(floorY);
+    //   for(int x = 0; x < width; ++x)
+    //   {
+    //     // the cell coord is simply got from the integer parts of floorX and floorY
+    //     int cellX = (int)(floorX);
+    //     int cellY = (int)(floorY);
 
-        // get the texture coordinate from the fractional part
-        int tx = (int)(texWidth * (floorX - cellX)) & (texWidth - 1);
-        int ty = (int)(texHeight * (floorY - cellY)) & (texHeight - 1);
+    //     // get the texture coordinate from the fractional part
+    //     int tx = (int)(texWidth * (floorX - cellX)) & (texWidth - 1);
+    //     int ty = (int)(texHeight * (floorY - cellY)) & (texHeight - 1);
 
-        floorX += floorStepX;
-        floorY += floorStepY;
+    //     floorX += floorStepX;
+    //     floorY += floorStepY;
 
-        // choose texture and draw the pixel
-        // int floorTexture = 3;
-        // int ceilingTexture = 6;
-        int col;
+    //     // choose texture and draw the pixel
+    //     // int floorTexture = 3;
+    //     // int ceilingTexture = 6;
+    //     int col;
 
-        // floor
-        col = color(&img->texture.img, x, y);
-        // col = (col >> 1) & 8355711; // make a bit darker
-        // buffer[y][x] = col;
+    //     // floor
+    //     col = color(&img->texture.img, x, y);
+    //     // col = (col >> 1) & 8355711; // make a bit darker
+    //     // buffer[y][x] = col;
 
-        //ceiling (symmetrical, at screenHeight - y - 1 instead of y)
-        // col = texture[ceilingTexture][texWidth * ty + tx];
-        // col = (col >> 1) & 8355711; // make a bit darker
-        // buffer[screenHeight - y - 1][x] = col;
-		my_mlx_pixel_put(&img->img, x, y, create_rgb(0, 255, 0));
-      }
-    }
+    //     //ceiling (symmetrical, at screenHeight - y - 1 instead of y)
+    //     // col = texture[ceilingTexture][texWidth * ty + tx];
+    //     // col = (col >> 1) & 8355711; // make a bit darker
+    //     // buffer[screenHeight - y - 1][x] = col;
+	// 	my_mlx_pixel_put(&img->img, x, y, create_rgb(0, 255, 0));
+    //   }
+    // }
 
 
 
@@ -426,7 +466,7 @@ void	ft_render(t_data *img)
       // // // Starting texture coordinate
       double texPos = (drawStart - height / 2 + lineHeight / 2) * step;
 	  int col;
-      int sprite;
+      int redWall;
 
     //sky
      for(int y = 0; y < drawStart; y++)
@@ -439,10 +479,10 @@ void	ft_render(t_data *img)
       }
 
     //floor
-    //  for(int y = drawEnd; y < height; y++)
-    //   {
-    //     my_mlx_pixel_put(&img->img,x, y, create_rgb(52, 235, 97));
-    //   }
+     for(int y = drawEnd; y < height; y++)
+      {
+        my_mlx_pixel_put(&img->img,x, y, create_rgb(52, 235, 97));
+      }
 
       for(int y = drawStart; y < drawEnd; y++)
       {
@@ -463,27 +503,96 @@ void	ft_render(t_data *img)
             else
                 col = color(&img->texture.img, texX, texY);
         }   
-        sprite = color(&img->barrel.img, texX, texY);
+        redWall = color(&img->redWall.img, texX, texY);
 	  //choose wall color
         int colors;
         switch(worldMap[mapX][mapY])
         {
-            case 1:  colors = col;   break; //red
-            case 2:  colors = sprite;  break; //green
-            case 3:  colors = sprite;   break; //blue
-            case 4:  colors = sprite;  break; //white
-            default: colors = sprite; break; //yellow
+            case 1:  colors = redWall;   break; //red
+            case 2:  colors = redWall;  break; //green
+            case 3:  colors = redWall;   break; //blue
+            case 4:  colors = redWall;  break; //white
+            default: colors = redWall; break; //yellow
         }
 
         //give x and y sides different brightness
         if(side == 1 && worldMap[mapX][mapY] != 1) {colors = colors / 2;}
             img->color = colors;
         my_mlx_pixel_put(&img->img, x, y, img->color);
-      }
-	
-	//draw the pixels of the stripe as a vertical line
-	 	// verLine(x, drawStart, drawEnd, *img);
+      }	
+	  ZBuffer[x] = perpWallDist; //perpendicular distance is used
 	}
+
+
+	//SPRITE CASTING
+    //sort sprites from far to close
+    for(int i = 0; i < numSprites; i++)
+    {
+      spriteOrder[i] = i;
+      spriteDistance[i] = ((img->pos.x - sprite[i].x) * (img->pos.x - sprite[i].x) + (img->pos.y - sprite[i].y) * (img->pos.y - sprite[i].y)); //sqrt not taken, unneeded
+    }
+    sortSprites(spriteOrder, spriteDistance, numSprites);
+
+    //after sorting the sprites, do the projection and draw them
+    for(int i = 0; i < numSprites; i++)
+    {
+      //translate sprite position to relative to camera
+      double spriteX = sprite[spriteOrder[i]].x - img->pos.x;
+      double spriteY = sprite[spriteOrder[i]].y - img->pos.y;
+
+      //transform sprite with the inverse camera matrix
+      // [ planeX   dirX ] -1                                       [ dirY      -dirX ]
+      // [               ]       =  1/(planeX*dirY-dirX*planeY) *   [                 ]
+      // [ planeY   dirY ]                                          [ -planeY  planeX ]
+
+      double invDet = 1.0 / (img->pla.x * img->dir.y - img->dir.x * img->pla.y); //required for correct matrix multiplication
+
+      double transformX = invDet * (img->dir.y * spriteX - img->dir.x * spriteY);
+      double transformY = invDet * (-img->pla.y * spriteX + img->pla.x * spriteY); //this is actually the depth inside the screen, that what Z is in 3D
+
+      int spriteScreenX = (int)((width / 2) * (1 + transformX / transformY));
+
+    //   //calculate height of the sprite on screen
+      int spriteHeight = abs((int)(height / (transformY))); //using 'transformY' instead of the real distance prevents fisheye
+    //   //calculate lowest and highest pixel to fill in current stripe
+      int drawStartY = -spriteHeight / 2 + height / 2;
+      if(drawStartY < 0) drawStartY = 0;
+      int drawEndY = spriteHeight / 2 + height / 2;
+      if(drawEndY >= height) drawEndY = height - 1;
+
+    //   //calculate width of the sprite
+      int spriteWidth = abs( (int) (height / (transformY)));
+      int drawStartX = -spriteWidth / 2 + spriteScreenX;
+      if(drawStartX < 0) drawStartX = 0;
+      int drawEndX = spriteWidth / 2 + spriteScreenX;
+      if(drawEndX >= width) drawEndX = width - 1;
+
+    // //   loop through every vertical stripe of the sprite on screen
+      for(int stripe = drawStartX; stripe < drawEndX; stripe++)
+      {
+        int texX = (int)(256 * (stripe - (-spriteWidth / 2 + spriteScreenX)) * texWidth / spriteWidth) / 256;
+        //the conditions in the if are:
+        //1) it's in front of camera plane so you don't see things behind you
+        //2) it's on the screen (left)
+        //3) it's on the screen (right)
+        //4) ZBuffer, with perpendicular distance
+        if(transformY > 0 && stripe > 0 && stripe < width && transformY < ZBuffer[stripe])
+        {
+          for(int y = drawStartY; y < drawEndY; y++) //for every pixel of the current stripe
+          {
+            int d = (y) * 256 - height * 128 + spriteHeight * 128; //256 and 128 factors to avoid floats
+            int texY = ((d * texHeight) / spriteHeight) / 256;
+            // //   Uint32 color = texture[sprite[spriteOrder[i]].texture][texWidth * texY + texX]; //get current color from the texture
+			      int	col = color(&img->barrel.img, texX, texY);
+            if((col & 0x00FFFFFF))
+              my_mlx_pixel_put(&img->img, stripe, y, col); //paint pixel if it isn't black, black is the invisible color
+		   }
+        }
+      }
+    }
+
+
+
 }
 
 void	ft_clear(t_data *data)
@@ -562,7 +671,7 @@ int  ft_stop(int keycode, t_data *data)
 int     main(void)
 {
 	t_data  img;
-	img.pos.x = 20.0;
+	img.pos.x = 20.5;
 	img.pos.y = 11.5; 
   	img.dir.x = -1.0;
 	img.dir.y = 0.0;
@@ -580,8 +689,10 @@ int     main(void)
     // img.texture.img.ptr = mlx_new_image(img.mlx, 64, 64);
 	img.texture.img.ptr = mlx_xpm_file_to_image(img.mlx, "./images/wall.xpm", &img.texture.w, &img.texture.h);
 	img.texture.img.addr = mlx_get_data_addr(img.texture.img.ptr, &img.texture.img.bits_per_pixel, &img.texture.img.line_length, &img.texture.img.endian);
-    img.barrel.img.ptr = mlx_xpm_file_to_image(img.mlx, "./images/redbrick.xpm", &img.barrel.w, &img.barrel.h);
+    img.barrel.img.ptr = mlx_xpm_file_to_image(img.mlx, "./images/barrel.xpm", &img.barrel.w, &img.barrel.h);
 	img.barrel.img.addr = mlx_get_data_addr(img.barrel.img.ptr, &img.barrel.img.bits_per_pixel, &img.barrel.img.line_length, &img.barrel.img.endian);
+	img.redWall.img.ptr = mlx_xpm_file_to_image(img.mlx, "./images/redbrick.xpm", &img.redWall.w, &img.redWall.h);
+	img.redWall.img.addr = mlx_get_data_addr(img.redWall.img.ptr, &img.redWall.img.bits_per_pixel, &img.redWall.img.line_length, &img.barrel.img.endian);
     // for(int i = 0; i < 64; i++)
     // {
     //    for(int j = 0; j < 64; j++)
