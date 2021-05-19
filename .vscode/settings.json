@@ -1,0 +1,8 @@
+{
+    "files.associations": {
+        "algorithm": "cpp",
+        "string": "c",
+        "memory": "cpp",
+        "utility": "cpp"
+    }
+}
